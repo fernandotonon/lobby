@@ -1,13 +1,16 @@
 #include "lobby.h"
 #include <QDebug>
 
-Lobby::Lobby()
+Lobby::Lobby(QObject *parent) :
+    QObject(parent)
 {
     thread = new QThread(this);
     timer.setInterval(interval);
     timer.moveToThread(thread);
     thread->start();
     connect(thread,SIGNAL(started()),&timer,SLOT(start()));
+
+    start();
 }
 
 void Lobby::start()
@@ -26,6 +29,7 @@ void Lobby::broadcastDatagram()
     obj["applicationName"] = QCoreApplication::applicationName();
     obj["applicationPid"] = QCoreApplication::applicationPid();
     obj["localHostName"] = QHostInfo::localHostName();
+    obj["localPort"] = udpSocket->localPort();
     QJsonDocument doc(obj);
     QByteArray datagram = doc.toJson(QJsonDocument::Compact);
     udpSocket->writeDatagram(datagram, QHostAddress::Broadcast, port);
@@ -37,7 +41,12 @@ void Lobby::processDatagram()
         QByteArray datagram;
         datagram.resize(udpSocket->pendingDatagramSize());
         udpSocket->readDatagram(datagram.data(), datagram.size());
-        qDebug()<<datagram.data();
+
+        if(!apps.count(datagram)){
+            apps[datagram]=QVariant(true);
+            emit appsChanged();
+        }else
+            apps[datagram]=QVariant(true);
     }
 }
 
