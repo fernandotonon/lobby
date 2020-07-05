@@ -1,5 +1,5 @@
-import QtQuick 2.12
-import QtQuick.Window 2.12
+import QtQuick 2.15
+import QtQuick.Window 2.15
 import Lobby 1.0
 
 Window {
@@ -20,11 +20,16 @@ Window {
             Text {
                 anchors.fill: parent
                 text: applicationPid + " " + localHostName
+                MouseArea{
+                    anchors.fill: parent
+                    onClicked: lobby.connectApp(JSON.stringify({"tcpPort":tcpPort,"ipList":ipList}))
+                }
             }
         }
     }
 
     Lobby{
+        id:lobby
         onAppsChanged: {
             appsModel.clear()
             for (var prop in apps) {
@@ -32,5 +37,7 @@ Window {
                 console.log(apps)
             }
         }
+        onMsgReceived: console.log(msg)
+        onConnectedToServer: sendMsg("test")
     }
 }

@@ -23,8 +23,5 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     engine.load(url);
 
-    Lobby *lobby = new Lobby();
-    lobby->start();
-
     return app.exec();
 }

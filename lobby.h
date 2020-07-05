@@ -11,30 +11,36 @@ class Lobby : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QVariantMap apps READ getApps NOTIFY appsChanged)
-    Q_INVOKABLE void startLobby(){
-            start();
-        }
     QML_ELEMENT
 public:
     explicit Lobby(QObject *parent = nullptr);
     void start();
     QVariantMap getApps(){return QVariantMap(apps);}
+    Q_INVOKABLE void connectApp(const QString &app);
+    Q_INVOKABLE void sendMsg(const QString &msg);
 
 signals:
     void appsChanged();
+    void msgReceived(const QString &msg);
+    void connectedToServer();
 
 private:
     QUdpSocket *udpSocket = nullptr;
+    QTcpSocket *tcpSocket = nullptr;
+    QTcpServer *tcpServer = nullptr;
     QTimer timer;
     QThread *thread;
     int interval = 1000;
     int port = 3333;
+    QByteArray datagram;
 
     QMap<QString,QVariant> apps;
 
 private slots:
     void broadcastDatagram();
     void processDatagram();
+    void newTCPConnection();
+    void readTCPDatagram();
 
 };
 
