@@ -22,12 +22,13 @@ public:
 signals:
     void appsChanged();
     void msgReceived(const QString &msg);
-    void connectedToServer();
+    void connectedToServer(const QString &server);
 
 private:
     QUdpSocket *udpSocket = nullptr;
     QTcpSocket *tcpSocket = nullptr;
     QTcpServer *tcpServer = nullptr;
+    QList<QTcpSocket*> tcpSocketList;
     QTimer timer;
     QThread *thread;
     int interval = 1000;

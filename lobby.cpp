@@ -62,7 +62,8 @@ void Lobby::connectApp(const QString &app)
     {
         tcpSocket->connectToHost(ip,obj["tcpPort"].toInt());
         if (tcpSocket->waitForConnected(1000)){
-            emit connectedToServer();
+            //tcpSocketList.append(tcpSocket);
+            emit connectedToServer(app);
             return;
         }
     }
@@ -104,10 +105,10 @@ void Lobby::newTCPConnection()
 {
     QTcpSocket *socket = tcpServer->nextPendingConnection();
     tcpSocket=socket;
+    connect(tcpSocket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
 }
 
 void Lobby::readTCPDatagram()
 {
     emit msgReceived(tcpSocket->readAll());
 }
-
