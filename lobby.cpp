@@ -60,9 +60,12 @@ void Lobby::connectApp(const QString &app)
 
     for(const QString &ip:obj["ipList"].toString().split(","))
     {
-        tcpSocket->connectToHost(ip,obj["tcpPort"].toInt());
-        if (tcpSocket->waitForConnected(1000)){
-            //tcpSocketList.append(tcpSocket);
+        QTcpSocket *socket = new QTcpSocket(this);
+
+        socket->connectToHost(ip,obj["tcpPort"].toInt());
+        if (socket->waitForConnected(1000)){
+            connect(socket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
+            tcpSocketList.append(socket);
             emit connectedToServer(app);
             return;
         }
@@ -72,10 +75,14 @@ void Lobby::connectApp(const QString &app)
 
 void Lobby::sendMsg(const QString &msg)
 {
-    tcpSocket->write(msg.toStdString().data());
-    tcpSocket->flush();
+    qDebug()<<tcpSocketList.size();
+    foreach (QTcpSocket *socket, tcpSocketList) {
+        socket->write(msg.toStdString().data());
+        socket->flush();
 
-    tcpSocket->waitForBytesWritten(3000);
+        socket->waitForBytesWritten(1000);
+    }
+
 }
 
 void Lobby::broadcastDatagram()
@@ -104,11 +111,14 @@ void Lobby::processDatagram()
 void Lobby::newTCPConnection()
 {
     QTcpSocket *socket = tcpServer->nextPendingConnection();
-    tcpSocket=socket;
-    connect(tcpSocket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
+    tcpSocketList.append(socket);
+    connect(socket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
 }
 
 void Lobby::readTCPDatagram()
 {
-    emit msgReceived(tcpSocket->readAll());
+    foreach (QTcpSocket *socket, tcpSocketList) {
+        emit msgReceived(socket->readAll());
+    }
+
 }
