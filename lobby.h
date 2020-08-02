@@ -17,25 +17,27 @@ public:
     void start();
     QVariantMap getApps(){return QVariantMap(apps);}
     Q_INVOKABLE void connectApp(const QString &app);
-    Q_INVOKABLE void sendMsg(const QString &msg);
+    Q_INVOKABLE void sendMsg(const QString &msg, const QString &UUID = "");
+    const QString appUUID = QUuid::createUuid().toString();
 
 signals:
     void appsChanged();
     void msgReceived(const QString &msg);
-    void connectedToServer(const QString &server);
+    void connectedTo(const QString &UUID);
 
 private:
     QUdpSocket *udpSocket = nullptr;
     QTcpSocket *tcpSocket = nullptr;
     QTcpServer *tcpServer = nullptr;
-    QList<QTcpSocket*> tcpSocketList;
+    QMap<QString,QTcpSocket*> tcpSocketMap;
+    QList<QTcpSocket*> tcpSocketUnnamedList;
     QTimer timer;
     QThread *thread;
     int interval = 1000;
     int port = 3333;
     QByteArray datagram;
-
     QMap<QString,QVariant> apps;
+    void writeTCPMsg(QTcpSocket* socket, const QString &msg);
 
 private slots:
     void broadcastDatagram();

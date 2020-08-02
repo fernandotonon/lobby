@@ -13,8 +13,7 @@ Lobby::Lobby(QObject *parent) :
     start();
 }
 
-void Lobby::start()
-{
+void Lobby::start(){
     int tcpPort = port+1;
     tcpServer = new QTcpServer(this);
     tcpSocket = new QTcpSocket(this);
@@ -41,6 +40,7 @@ void Lobby::start()
     obj["localHostName"] = QHostInfo::localHostName();
     obj["tcpPort"] = tcpPort;
     obj["ipList"] = "";
+    obj["UUID"] = appUUID;
 
     for(QHostAddress h: QNetworkInterface::allAddresses()){
       if(h.protocol()==QAbstractSocket::IPv4Protocol)
@@ -65,24 +65,35 @@ void Lobby::connectApp(const QString &app)
         socket->connectToHost(ip,obj["tcpPort"].toInt());
         if (socket->waitForConnected(1000)){
             connect(socket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
-            tcpSocketList.append(socket);
-            emit connectedToServer(app);
+            tcpSocketMap[obj["UUID"].toString()]=socket;
+            socket->write(("setUUID="+appUUID).toStdString().data());
+            socket->flush();
+            socket->waitForBytesWritten(1000);
+            emit connectedTo(obj["UUID"].toString());
             return;
         }
     }
     qDebug()<<"not connected";
 }
 
-void Lobby::sendMsg(const QString &msg)
+void Lobby::sendMsg(const QString &msg, const QString &UUID)
 {
-    qDebug()<<tcpSocketList.size();
-    foreach (QTcpSocket *socket, tcpSocketList) {
+    if(UUID.size()) //Send to a specific node
+        writeTCPMsg(tcpSocketMap[UUID],msg);
+    else //Broadcast
+        foreach (QTcpSocket *socket, tcpSocketMap.values()) {
+            writeTCPMsg(socket,msg);
+        }
+
+}
+
+void Lobby::writeTCPMsg(QTcpSocket *socket, const QString &msg)
+{
+    if(socket){
         socket->write(msg.toStdString().data());
         socket->flush();
-
         socket->waitForBytesWritten(1000);
     }
-
 }
 
 void Lobby::broadcastDatagram()
@@ -111,14 +122,27 @@ void Lobby::processDatagram()
 void Lobby::newTCPConnection()
 {
     QTcpSocket *socket = tcpServer->nextPendingConnection();
-    tcpSocketList.append(socket);
+    tcpSocketUnnamedList.append(socket);
     connect(socket, SIGNAL(readyRead()), this,SLOT(readTCPDatagram()));
 }
 
 void Lobby::readTCPDatagram()
 {
-    foreach (QTcpSocket *socket, tcpSocketList) {
-        emit msgReceived(socket->readAll());
+    foreach (QTcpSocket *socket, tcpSocketMap.values()) {
+        QString msg = socket->readAll();
+        emit msgReceived(msg);
     }
 
+    //TODO: If a socket gets too long in this list it should ask for its UUID or close the connection
+    for(int i = tcpSocketUnnamedList.size()-1;i>=0;i--) {
+        QTcpSocket *socket=tcpSocketUnnamedList[i];
+        QString msg = socket->readAll();
+        if(msg.startsWith("setUUID=")){
+                tcpSocketMap[msg.replace("setUUID=","")]=socket;
+                tcpSocketUnnamedList.removeAt(i);
+                emit connectedTo(msg.replace("setUUID=",""));
+        }
+        else
+            emit msgReceived(msg);
+    }
 }

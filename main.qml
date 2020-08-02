@@ -8,7 +8,7 @@ Window {
     width: 640
     height: 480
     title: qsTr("Hello World")
-    property string connectedTo: ""
+    property string connectedApps: ""
 
     ListModel{
         id:appsModel
@@ -33,14 +33,22 @@ Window {
                     anchors.margins: 2
                     model: appsModel
                     delegate: Rectangle{
-                        width: 100; height: 30
-                        Text {
-                            anchors.fill: parent
-                            text: applicationPid + " " + localHostName
-                            font.bold: connectedTo.indexOf(applicationPid + " " + localHostName)>=0
-                            MouseArea{
-                                anchors.fill: parent
-                                onClicked: lobby.connectApp(JSON.stringify({"applicationPid":applicationPid,"localHostName":localHostName,"tcpPort":tcpPort,"ipList":ipList}))
+                        width: 150; height: 30
+                        Row {
+                            Text {
+                                width: 100; height: 30
+                                text: applicationPid + " " + localHostName
+                                font.bold: connectedApps.indexOf(UUID)>=0
+                                MouseArea{
+                                    anchors.fill: parent
+                                    onClicked: lobby.connectApp(JSON.stringify({"applicationPid":applicationPid,"localHostName":localHostName,"tcpPort":tcpPort,"ipList":ipList,"UUID":UUID}))
+                                }
+                            }
+                            Button{
+                                width: 50; height: 30
+                                visible: connectedApps.indexOf(UUID)>=0
+                                text: "send test"
+                                onClicked: lobby.sendMsg("test",UUID)
                             }
                         }
                     }
@@ -84,10 +92,8 @@ Window {
         onMsgReceived: {console.log(msg)
             msgReceived.append({"msg":msg})
         }
-        onConnectedToServer: {sendMsg("test")
-            console.log("server:"+server)
-            var json = JSON.parse(server)
-            connectedTo+=json.applicationPid + " " + json.localHostName
+        onConnectedTo: {
+            connectedApps+=UUID
         }
     }
 }
